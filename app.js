@@ -39,6 +39,55 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function calculateNextOccurrence(fromDate, repeat) {
+  const d = new Date(fromDate + 'T00:00:00');
+  if (repeat === 'daily') d.setDate(d.getDate() + 1);
+  else if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+  else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function spawnNextOccurrence(task) {
+  const nextDue = task.repeatNext;
+  if (!nextDue || !task.repeat) return;
+  // Advance repeatNext until it's in the future
+  let newRepeatNext = nextDue;
+  const t = today();
+  do { newRepeatNext = calculateNextOccurrence(newRepeatNext, task.repeat); } while (newRepeatNext <= t);
+
+  state.tasks.push({
+    id: uuid(),
+    title: task.title,
+    workspaceId: task.workspaceId,
+    status: 'Not Started',
+    priority: task.priority,
+    dueDate: nextDue,
+    contentType: task.contentType,
+    notes: '',
+    subtasks: (task.subtasks || []).map(s => ({ id: uuid(), title: s.title, done: false })),
+    createdAt: new Date().toISOString(),
+    completedAt: null,
+    repeat: task.repeat,
+    repeatNext: newRepeatNext,
+  });
+  // Original task loses its repeat — it becomes a plain completed/overdue task
+  task.repeat = null;
+  task.repeatNext = null;
+}
+
+async function checkAndSpawnRecurring() {
+  const t = today();
+  let changed = false;
+  state.tasks.forEach(task => {
+    if (!task.repeat || !task.repeatNext) return;
+    if (task.repeatNext <= t) {
+      spawnNextOccurrence(task);
+      changed = true;
+    }
+  });
+  if (changed) await saveData();
+}
+
 function isoToDisplay(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
@@ -158,6 +207,7 @@ async function loadAndRender() {
     return;
   }
 
+  await checkAndSpawnRecurring();
   renderSidebar();
   renderWorkspaceDropdowns();
   navigateTo('today');
@@ -552,9 +602,14 @@ function renderKanban(wsId) {
       const newStatus = zone.dataset.status;
       const task = state.tasks.find(t => t.id === dragTaskId);
       if (task && task.status !== newStatus) {
+        const wasNotDone = task.status !== 'Done';
         task.status = newStatus;
-        if (newStatus === 'Done') task.completedAt = new Date().toISOString();
-        else task.completedAt = null;
+        if (newStatus === 'Done') {
+          task.completedAt = new Date().toISOString();
+          if (wasNotDone && task.repeat && task.repeatNext) spawnNextOccurrence(task);
+        } else {
+          task.completedAt = null;
+        }
         await saveData();
         renderKanban(wsId);
       }
@@ -700,6 +755,7 @@ function openTaskPanel(taskId = null, defaultWorkspaceId = null, defaultStatus =
   document.getElementById('task-priority').value = task?.priority || '';
   document.getElementById('task-due-date').value = task?.dueDate || '';
   document.getElementById('task-content-type').value = task?.contentType || '';
+  document.getElementById('task-repeat').value = task?.repeat || '';
   document.getElementById('task-notes').value = task?.notes || '';
 
   const deleteBtn = document.getElementById('delete-task-btn');
@@ -760,31 +816,42 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
   })).filter(s => s.title);
 
   const status = document.getElementById('task-status').value;
+  const repeat = document.getElementById('task-repeat').value || null;
+  const dueDate = document.getElementById('task-due-date').value || null;
+
+  // repeatNext = first occurrence after the due date (or today if no due date)
+  const repeatBase = dueDate || today();
+  const repeatNext = repeat ? calculateNextOccurrence(repeatBase, repeat) : null;
 
   if (editingTaskId) {
     const task = state.tasks.find(t => t.id === editingTaskId);
+    const wasNotDone = task.status !== 'Done';
     Object.assign(task, {
-      title,
-      workspaceId,
-      status,
+      title, workspaceId, status,
       priority: document.getElementById('task-priority').value || null,
-      dueDate: document.getElementById('task-due-date').value || null,
+      dueDate,
       contentType: document.getElementById('task-content-type').value || null,
       notes: document.getElementById('task-notes').value,
       subtasks,
+      repeat,
+      repeatNext,
       completedAt: status === 'Done' ? (task.completedAt || new Date().toISOString()) : null,
     });
+    // If just marked Done and has a repeat, spawn next immediately
+    if (status === 'Done' && wasNotDone && repeat && repeatNext) {
+      spawnNextOccurrence(task);
+    }
   } else {
     state.tasks.push({
       id: uuid(),
-      title,
-      workspaceId,
-      status,
+      title, workspaceId, status,
       priority: document.getElementById('task-priority').value || null,
-      dueDate: document.getElementById('task-due-date').value || null,
+      dueDate,
       contentType: document.getElementById('task-content-type').value || null,
       notes: document.getElementById('task-notes').value,
       subtasks,
+      repeat,
+      repeatNext,
       createdAt: new Date().toISOString(),
       completedAt: status === 'Done' ? new Date().toISOString() : null,
     });
@@ -1080,9 +1147,9 @@ function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ===== Service worker =====
+// ===== Service worker — unregister any stale SW then skip registration =====
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 
 // ===== Start =====
