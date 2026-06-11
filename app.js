@@ -207,7 +207,7 @@ async function loadAndRender() {
     return;
   }
 
-  await checkAndSpawnRecurring();
+  try { await checkAndSpawnRecurring(); } catch (e) { console.warn('checkAndSpawnRecurring failed:', e); }
   renderSidebar();
   renderWorkspaceDropdowns();
   navigateTo('today');
