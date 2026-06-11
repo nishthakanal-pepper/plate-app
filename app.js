@@ -119,16 +119,26 @@ function showSaveIndicator() {
 // ===== GitHub API =====
 async function ghFetch(path, options = {}) {
   const url = `https://api.github.com${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `token ${ghToken}`,
-      Accept: 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-  return res;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Authorization: `token ${ghToken}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    return res;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Request timed out. Check your internet connection.');
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function ensureRepo() {
@@ -178,19 +188,30 @@ async function init() {
   await loadAndRender();
 }
 
+function showLoadError(msg) {
+  let el = document.getElementById('load-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'load-error';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:14px 20px;font-size:14px;z-index:9999;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+}
+
 async function loadAndRender() {
+  const loader = document.getElementById('load-spinner');
+  if (loader) loader.classList.remove('hidden');
   try {
     await ensureRepo();
     const data = await loadData();
     if (data) {
       state = data;
-      // Ensure required arrays exist
       if (!state.workspaces) state.workspaces = [];
       if (!state.tasks) state.tasks = [];
       if (!state.templates) state.templates = [];
       if (!state.settings) state.settings = { theme: 'dark' };
     } else {
-      // First run: seed defaults
       state.workspaces = DEFAULT_WORKSPACES.map((w, i) => ({
         id: uuid(), name: w.name, color: w.color, archived: false, order: i, createdAt: new Date().toISOString()
       }));
@@ -202,11 +223,12 @@ async function loadAndRender() {
       await saveData();
     }
   } catch (e) {
-    console.error(e);
-    alert('Failed to connect to GitHub. Check your token and username.');
+    if (loader) loader.classList.add('hidden');
+    showLoadError('Could not load data: ' + e.message + ' — Check your internet connection and GitHub token.');
     return;
   }
 
+  if (loader) loader.classList.add('hidden');
   try { await checkAndSpawnRecurring(); } catch (e) { console.warn('checkAndSpawnRecurring failed:', e); }
   renderSidebar();
   renderWorkspaceDropdowns();
