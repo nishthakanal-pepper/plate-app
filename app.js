@@ -49,11 +49,16 @@ function calculateNextOccurrence(fromDate, repeat) {
 
 function spawnNextOccurrence(task) {
   const nextDue = task.repeatNext;
-  if (!nextDue || !task.repeat) return;
-  // Advance repeatNext until it's in the future
+  const VALID_REPEATS = ['daily', 'weekly', 'monthly'];
+  if (!nextDue || !VALID_REPEATS.includes(task.repeat)) return;
+  // Advance repeatNext until it's in the future (safety cap: 3650 iterations)
   let newRepeatNext = nextDue;
   const t = today();
-  do { newRepeatNext = calculateNextOccurrence(newRepeatNext, task.repeat); } while (newRepeatNext <= t);
+  let safety = 0;
+  do {
+    newRepeatNext = calculateNextOccurrence(newRepeatNext, task.repeat);
+    if (++safety > 3650) { task.repeat = null; task.repeatNext = null; return; }
+  } while (newRepeatNext <= t);
 
   state.tasks.push({
     id: uuid(),
