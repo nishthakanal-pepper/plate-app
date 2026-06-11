@@ -523,8 +523,9 @@ function renderToday() {
 
 function buildTaskCard(task) {
   const status = getDeadlineStatus(task.dueDate, task.status);
+  const isDone = task.status === 'Done';
   const card = document.createElement('div');
-  card.className = `task-card${status ? ' ' + status : ''}${task.status === 'Done' ? ' done' : ''}`;
+  card.className = `task-card${status ? ' ' + status : ''}${isDone ? ' done' : ''}`;
   card.dataset.id = task.id;
 
   const donePct = task.subtasks?.length
@@ -532,7 +533,7 @@ function buildTaskCard(task) {
     : '';
 
   let dueHtml = '';
-  if (task.dueDate && task.status !== 'Done') {
+  if (task.dueDate && !isDone) {
     const label = task.dueDate < today() ? 'Overdue' : isoToDisplay(task.dueDate);
     const cls = status === 'overdue' ? 'overdue' : status === 'due-today' ? 'due-today' : '';
     dueHtml = `<span class="due-label ${cls}">${label}</span>`;
@@ -543,11 +544,19 @@ function buildTaskCard(task) {
   const subtaskHtml = donePct ? `<span class="subtask-count">☑ ${donePct}</span>` : '';
 
   card.innerHTML = `
-    <div class="task-card-title">${escHtml(task.title)}</div>
+    <div class="task-card-top">
+      <button class="task-check${isDone ? ' checked' : ''}" title="${isDone ? 'Mark incomplete' : 'Mark done'}"></button>
+      <div class="task-card-title">${escHtml(task.title)}</div>
+    </div>
     <div class="task-card-meta">
       ${dueHtml}${priorityHtml}${typeHtml}${subtaskHtml}
     </div>
   `;
+
+  card.querySelector('.task-check').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await toggleTaskDone(task.id);
+  });
   card.addEventListener('click', () => openTaskPanel(task.id));
   return card;
 }
@@ -660,6 +669,7 @@ function renderAllTasks() {
     const dueDisplay = task.dueDate ? isoToDisplay(task.dueDate) : '';
     const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
     item.innerHTML = `
+      <button class="task-check${task.status === 'Done' ? ' checked' : ''}" title="${task.status === 'Done' ? 'Mark incomplete' : 'Mark done'}"></button>
       <span class="task-list-item-title">${escHtml(task.title)}</span>
       ${priorityHtml}
       <span class="content-type-tag" style="display:${task.contentType ? 'inline' : 'none'}">${task.contentType || ''}</span>
@@ -669,6 +679,10 @@ function renderAllTasks() {
       </span>
       <span class="due-label${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}" style="flex-shrink:0">${dueDisplay}</span>
     `;
+    item.querySelector('.task-check').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleTaskDone(task.id);
+    });
     item.addEventListener('click', () => openTaskPanel(task.id));
     list.appendChild(item);
   });
@@ -870,6 +884,17 @@ document.getElementById('delete-task-btn').addEventListener('click', async () =>
   closeTaskPanel();
   refreshCurrentView();
 });
+
+async function toggleTaskDone(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const wasNotDone = task.status !== 'Done';
+  task.status = wasNotDone ? 'Done' : 'Not Started';
+  task.completedAt = wasNotDone ? new Date().toISOString() : null;
+  if (wasNotDone && task.repeat && task.repeatNext) spawnNextOccurrence(task);
+  await saveData();
+  refreshCurrentView();
+}
 
 function refreshCurrentView() {
   if (currentView === 'today') renderToday();

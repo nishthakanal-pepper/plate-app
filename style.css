@@ -767,6 +767,45 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   transition: opacity 0.3s;
 }
 
+/* ===== Task checkbox ===== */
+.task-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-card-top .task-card-title { flex: 1; }
+
+.task-check {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.task-check:hover { border-color: var(--done); }
+.task-check.checked {
+  background: var(--done);
+  border-color: var(--done);
+}
+.task-check.checked::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #0f0f0f;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
 /* ===== Drag & drop ===== */
 .dragging { opacity: 0.4; }
 
