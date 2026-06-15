@@ -7,7 +7,7 @@
   <title>Plate</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
   <!-- Setup screen -->
@@ -188,6 +188,16 @@
           <h3 class="settings-section-title">Templates</h3>
           <div id="templates-list" class="template-list"></div>
           <button class="btn-ghost" id="add-template-btn">+ Add Template</button>
+
+          <h3 class="settings-section-title">Sounds</h3>
+          <div class="settings-row">
+            <span class="settings-label">Completion sound</span>
+            <div class="sound-options">
+              <button class="sound-option active" data-sound="ding">Ding</button>
+              <button class="sound-option" data-sound="pop">Pop</button>
+              <button class="sound-option" data-sound="none">None</button>
+            </div>
+          </div>
 
           <h3 class="settings-section-title">Workspaces</h3>
           <div class="settings-row">
@@ -411,6 +421,6 @@
     <div id="load-spinner" class="load-spinner hidden">Loading…</div>
   </div>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

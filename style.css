@@ -820,6 +820,72 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   z-index: 400;
 }
 
+/* ===== Good job toast ===== */
+.good-job-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 500;
+  opacity: 1;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.good-job-toast.toast-out { opacity: 0; }
+.toast-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.toast-sub { font-size: 13px; color: var(--text-secondary); }
+
+/* ===== Workspace view toggle ===== */
+.workspace-kanban-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 16px 0;
+}
+.ws-view-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ws-view-btn {
+  padding: 5px 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.ws-view-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ===== Sound picker ===== */
+.sound-options { display: flex; gap: 6px; }
+.sound-option {
+  padding: 5px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.sound-option.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* ===== Drag & drop ===== */
 .dragging { opacity: 0.4; }
 

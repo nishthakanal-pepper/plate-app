@@ -295,7 +295,7 @@ function navigateTo(view, workspaceId = null) {
     titleEl.textContent = ws ? ws.name : 'Workspace';
     document.querySelector(`.workspace-item[data-id="${workspaceId}"]`)?.classList.add('active');
     addBtn.classList.remove('hidden');
-    renderKanban(workspaceId);
+    renderWorkspaceView(workspaceId);
   } else {
     const viewEl = document.getElementById(`view-${view}`);
     if (viewEl) viewEl.classList.add('active');
@@ -602,7 +602,22 @@ function renderKanban(wsId) {
       <span class="ws-dot" style="background:${ws?.color};width:12px;height:12px"></span>
       ${escHtml(ws?.name || '')}
     </div>
+    <div class="ws-view-toggle">
+      <button class="ws-view-btn active" data-mode="kanban" title="Kanban view">▦</button>
+      <button class="ws-view-btn" data-mode="list" title="List view">☰</button>
+    </div>
   `;
+  header.querySelectorAll('.ws-view-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      setWsViewMode(wsId, btn.dataset.mode);
+      await saveData();
+      renderWorkspaceView(wsId);
+    });
+  });
+
+  document.getElementById('kanban-board').classList.remove('hidden');
+  const listEl = document.getElementById('ws-list-view');
+  if (listEl) listEl.classList.add('hidden');
 
   const statuses = ['Not Started', 'In Progress', 'With Client', 'Done'];
   statuses.forEach(status => {
@@ -768,8 +783,21 @@ function renderWeekly() {
 function renderSettings() {
   document.getElementById('settings-username').textContent = ghUsername;
   document.getElementById('show-archived-toggle').checked = showArchived;
+  const sound = state.settings.completionSound || 'ding';
+  document.querySelectorAll('.sound-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sound === sound);
+  });
   renderTemplateList();
 }
+
+document.querySelectorAll('.sound-option').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    state.settings.completionSound = btn.dataset.sound;
+    document.querySelectorAll('.sound-option').forEach(b => b.classList.toggle('active', b === btn));
+    playCompletionSound();
+    await saveData();
+  });
+});
 
 document.getElementById('show-archived-toggle').addEventListener('change', (e) => {
   showArchived = e.target.checked;
@@ -919,15 +947,153 @@ async function toggleTaskDone(taskId) {
   task.status = wasNotDone ? 'Done' : 'Not Started';
   task.completedAt = wasNotDone ? new Date().toISOString() : null;
   if (wasNotDone && task.repeat && task.repeatNext) spawnNextOccurrence(task);
+  if (wasNotDone) { playCompletionSound(); showGoodJobToast(); }
   await saveData();
   refreshCurrentView();
 }
 
+function playCompletionSound() {
+  const sound = state.settings.completionSound || 'ding';
+  if (sound === 'none') return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (sound === 'ding') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } else if (sound === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    }
+    ctx.close();
+  } catch(e) {}
+}
+
+function showGoodJobToast() {
+  let toast = document.getElementById('good-job-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'good-job-toast';
+    toast.className = 'good-job-toast';
+    toast.innerHTML = '<span style="font-size:28px">🎉</span><div><div class="toast-title">Good job!</div><div class="toast-sub">Task marked as done</div></div>';
+    document.body.appendChild(toast);
+  }
+  toast.classList.remove('hidden', 'toast-out');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.classList.add('hidden'), 400);
+  }, 1600);
+}
+
 function refreshCurrentView() {
   if (currentView === 'today') renderToday();
-  else if (currentView === 'workspace') renderKanban(currentWorkspaceId);
+  else if (currentView === 'workspace') renderWorkspaceView(currentWorkspaceId);
   else if (currentView === 'all-tasks') renderAllTasks();
   else if (currentView === 'weekly') renderWeekly();
+}
+
+function getWsViewMode(wsId) {
+  return (state.settings.wsViewMode || {})[wsId] || 'kanban';
+}
+
+function setWsViewMode(wsId, mode) {
+  if (!state.settings.wsViewMode) state.settings.wsViewMode = {};
+  state.settings.wsViewMode[wsId] = mode;
+}
+
+function renderWorkspaceView(wsId) {
+  if (getWsViewMode(wsId) === 'list') renderWorkspaceList(wsId);
+  else renderKanban(wsId);
+}
+
+function renderWorkspaceList(wsId) {
+  const ws = getWorkspace(wsId);
+  const viewEl = document.getElementById('view-workspace');
+
+  let header = document.querySelector('.workspace-kanban-header');
+  if (!header) {
+    header = document.createElement('div');
+    header.className = 'workspace-kanban-header';
+    viewEl.prepend(header);
+  }
+  header.innerHTML = `
+    <div class="workspace-kanban-title">
+      <span class="ws-dot" style="background:${ws?.color};width:12px;height:12px"></span>
+      ${escHtml(ws?.name || '')}
+    </div>
+    <div class="ws-view-toggle">
+      <button class="ws-view-btn" data-mode="kanban" title="Kanban view">▦</button>
+      <button class="ws-view-btn active" data-mode="list" title="List view">☰</button>
+    </div>
+  `;
+  header.querySelectorAll('.ws-view-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      setWsViewMode(wsId, btn.dataset.mode);
+      await saveData();
+      renderWorkspaceView(wsId);
+    });
+  });
+
+  document.getElementById('kanban-board').classList.add('hidden');
+  let listEl = document.getElementById('ws-list-view');
+  if (!listEl) {
+    listEl = document.createElement('div');
+    listEl.id = 'ws-list-view';
+    listEl.className = 'task-list';
+    viewEl.appendChild(listEl);
+  }
+  listEl.classList.remove('hidden');
+  listEl.innerHTML = '';
+
+  const statuses = ['Not Started', 'In Progress', 'With Client', 'Done'];
+  const tasks = state.tasks
+    .filter(t => t.workspaceId === wsId)
+    .sort((a, b) => {
+      const si = statuses.indexOf(a.status) - statuses.indexOf(b.status);
+      if (si !== 0) return si;
+      return (a.dueDate || 'z').localeCompare(b.dueDate || 'z');
+    });
+
+  if (!tasks.length) {
+    listEl.innerHTML = '<p style="color:var(--text-secondary);padding:20px 0;font-size:14px">No tasks in this workspace.</p>';
+    return;
+  }
+
+  tasks.forEach(task => {
+    const status = getDeadlineStatus(task.dueDate, task.status);
+    const item = document.createElement('div');
+    item.className = `task-list-item${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}${task.status === 'Done' ? ' done' : ''}`;
+    const dueDisplay = task.dueDate ? isoToDisplay(task.dueDate) : '';
+    const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
+    item.innerHTML = `
+      <button class="task-check${task.status === 'Done' ? ' checked' : ''}" title="${task.status === 'Done' ? 'Mark incomplete' : 'Mark done'}"></button>
+      <span class="task-list-item-title">${escHtml(task.title)}</span>
+      ${priorityHtml}
+      <span class="content-type-tag" style="display:${task.contentType ? 'inline' : 'none'}">${task.contentType || ''}</span>
+      <span class="task-list-ws-status" style="color:var(--text-secondary);font-size:12px;flex-shrink:0">${task.status}</span>
+      <span class="due-label${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}" style="flex-shrink:0">${dueDisplay}</span>
+    `;
+    item.querySelector('.task-check').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await toggleTaskDone(task.id);
+    });
+    item.addEventListener('click', () => openTaskPanel(task.id));
+    listEl.appendChild(item);
+  });
 }
 
 // ===== Quick add =====
