@@ -315,6 +315,10 @@ function navigateTo(view, workspaceId = null) {
       titleEl.textContent = 'Weekly';
       addBtn.classList.remove('hidden');
       renderWeekly();
+    } else if (view === 'calendar') {
+      titleEl.textContent = 'Calendar';
+      addBtn.classList.add('hidden');
+      renderCalendar();
     } else if (view === 'settings') {
       titleEl.textContent = 'Settings';
       addBtn.classList.add('hidden');
@@ -957,28 +961,30 @@ function playCompletionSound() {
   if (sound === 'none') return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    if (sound === 'ding') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
-    } else if (sound === 'pop') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-    }
-    ctx.close();
+    ctx.resume().then(() => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      if (sound === 'ding') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      } else if (sound === 'pop') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      }
+      osc.onended = () => ctx.close();
+    });
   } catch(e) {}
 }
 
@@ -1004,7 +1010,110 @@ function refreshCurrentView() {
   else if (currentView === 'workspace') renderWorkspaceView(currentWorkspaceId);
   else if (currentView === 'all-tasks') renderAllTasks();
   else if (currentView === 'weekly') renderWeekly();
+  else if (currentView === 'calendar') renderCalendar();
 }
+
+// ===== Calendar view =====
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calSelectedDay = null;
+
+function renderCalendar() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('cal-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+
+  DAYS.forEach(d => {
+    const h = document.createElement('div');
+    h.className = 'cal-day-name';
+    h.textContent = d;
+    grid.appendChild(h);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const todayStr = today();
+
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'cal-cell empty';
+    grid.appendChild(blank);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTasks = state.tasks.filter(t => t.dueDate === dateStr);
+    const cell = document.createElement('div');
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === calSelectedDay;
+    cell.className = `cal-cell${isToday ? ' cal-today' : ''}${isSelected ? ' cal-selected' : ''}`;
+    cell.innerHTML = `<span class="cal-day-num">${d}</span>`;
+
+    if (dayTasks.length) {
+      const dots = document.createElement('div');
+      dots.className = 'cal-dots';
+      const shown = dayTasks.slice(0, 3);
+      shown.forEach(t => {
+        const ws = getWorkspace(t.workspaceId);
+        const dot = document.createElement('span');
+        dot.className = 'cal-dot';
+        dot.style.background = ws?.color || '#6b7280';
+        if (t.status === 'Done') dot.style.opacity = '0.35';
+        dots.appendChild(dot);
+      });
+      if (dayTasks.length > 3) {
+        const more = document.createElement('span');
+        more.className = 'cal-dot-more';
+        more.textContent = `+${dayTasks.length - 3}`;
+        dots.appendChild(more);
+      }
+      cell.appendChild(dots);
+    }
+
+    cell.addEventListener('click', () => {
+      calSelectedDay = dateStr;
+      renderCalendar();
+      showCalendarDayPanel(dateStr);
+    });
+    grid.appendChild(cell);
+  }
+
+  if (calSelectedDay) showCalendarDayPanel(calSelectedDay);
+}
+
+function showCalendarDayPanel(dateStr) {
+  const panel = document.getElementById('calendar-day-panel');
+  const titleEl = document.getElementById('cal-day-title');
+  const tasksEl = document.getElementById('cal-day-tasks');
+  const [y, m, d] = dateStr.split('-');
+  titleEl.textContent = `${parseInt(d)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]} ${y}`;
+  const dayTasks = state.tasks.filter(t => t.dueDate === dateStr);
+  tasksEl.innerHTML = '';
+  if (!dayTasks.length) {
+    tasksEl.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;padding:4px 0">No tasks due</p>';
+  } else {
+    dayTasks.forEach(task => tasksEl.appendChild(buildTaskCard(task)));
+  }
+  panel.classList.remove('hidden');
+}
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  calSelectedDay = null;
+  document.getElementById('calendar-day-panel').classList.add('hidden');
+  renderCalendar();
+});
+document.getElementById('cal-next').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  calSelectedDay = null;
+  document.getElementById('calendar-day-panel').classList.add('hidden');
+  renderCalendar();
+});
 
 function getWsViewMode(wsId) {
   return (state.settings.wsViewMode || {})[wsId] || 'kanban';

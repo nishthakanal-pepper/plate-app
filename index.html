@@ -7,7 +7,7 @@
   <title>Plate</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <!-- Setup screen -->
@@ -53,6 +53,10 @@
         <a href="#" class="nav-item" data-view="weekly">
           <span class="nav-icon">📅</span>
           <span>Weekly</span>
+        </a>
+        <a href="#" class="nav-item" data-view="calendar">
+          <span class="nav-icon">🗓️</span>
+          <span>Calendar</span>
         </a>
       </nav>
 
@@ -169,6 +173,19 @@
         <div id="weekly-grid" class="weekly-grid"></div>
       </div>
 
+      <div id="view-calendar" class="view">
+        <div class="calendar-header">
+          <button class="icon-btn" id="cal-prev">‹</button>
+          <span id="cal-month-label" class="cal-month-label"></span>
+          <button class="icon-btn" id="cal-next">›</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div id="calendar-day-panel" class="calendar-day-panel hidden">
+          <div class="cal-day-title" id="cal-day-title"></div>
+          <div id="cal-day-tasks"></div>
+        </div>
+      </div>
+
       <div id="view-settings" class="view">
         <div class="settings-content">
           <h3 class="settings-section-title">Account</h3>
@@ -223,6 +240,10 @@
       <a href="#" class="bottom-nav-item" data-view="weekly">
         <span class="bottom-nav-icon">📅</span>
         <span>Weekly</span>
+      </a>
+      <a href="#" class="bottom-nav-item" data-view="calendar">
+        <span class="bottom-nav-icon">🗓️</span>
+        <span>Calendar</span>
       </a>
       <a href="#" class="bottom-nav-item" id="mobile-add-btn">
         <span class="bottom-nav-icon">➕</span>
@@ -421,6 +442,6 @@
     <div id="load-spinner" class="load-spinner hidden">Loading…</div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
