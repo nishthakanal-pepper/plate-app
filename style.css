@@ -2,17 +2,17 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #130e09;
-  --surface: #1c1510;
-  --sidebar: #160f09;
+  --bg: #FFF8F2;
+  --surface: #FFFFFF;
+  --sidebar: #FFF1E2;
   --accent: #E8621A;
   --accent-dark: #b84c12;
-  --overdue: #f87171;
-  --due-soon: #fbbf24;
-  --done: #4ade80;
-  --text: #f5ede6;
-  --text-secondary: #7a6a5f;
-  --border: #2e2018;
+  --overdue: #c0392b;
+  --due-soon: #b45309;
+  --done: #166534;
+  --text: #1c0f06;
+  --text-secondary: #8B6A55;
+  --border: #E8D5C4;
   --radius: 8px;
   --radius-sm: 4px;
   --sidebar-width: 240px;
@@ -44,7 +44,7 @@ input, select, textarea {
   width: 100%;
   outline: none;
   transition: border-color 0.15s;
-  color-scheme: dark;
+  color-scheme: light;
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 
@@ -52,13 +52,13 @@ input[type="date"] {
   cursor: pointer;
 }
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
+  filter: invert(0.3);
   cursor: pointer;
   border-radius: 3px;
   padding: 2px;
 }
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  filter: invert(0.9);
+  filter: invert(0.1);
   background: var(--border);
 }
 select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
@@ -366,7 +366,7 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   flex-direction: column;
   gap: 6px;
 }
-.task-card:hover { background: #202020; }
+.task-card:hover { background: #f5e6d8; }
 
 .task-card.overdue { border-left-color: var(--overdue); }
 .task-card.due-today { border-left-color: var(--due-soon); }
@@ -506,7 +506,7 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   gap: 12px;
   transition: background 0.15s;
 }
-.task-list-item:hover { background: #202020; }
+.task-list-item:hover { background: #f5e6d8; }
 .task-list-item.overdue { border-left-color: var(--overdue); }
 .task-list-item.due-today { border-left-color: var(--due-soon); }
 .task-list-item.done { opacity: 0.6; }
@@ -613,10 +613,10 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   cursor: pointer;
   transition: background 0.12s;
 }
-.cal-cell:hover { background: #202020; }
+.cal-cell:hover { background: #f5e6d8; }
 .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
 .cal-cell.cal-today { border-color: var(--accent); }
-.cal-cell.cal-selected { background: #1e1a3a; border-color: var(--accent); }
+.cal-cell.cal-selected { background: #fde8d8; border-color: var(--accent); }
 .cal-day-num {
   font-size: 13px;
   color: var(--text-secondary);
@@ -931,7 +931,7 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   display: block;
   width: 5px;
   height: 9px;
-  border: 2px solid #0f0f0f;
+  border: 2px solid #fff;
   border-top: none;
   border-left: none;
   transform: rotate(45deg) translate(-1px, -1px);
