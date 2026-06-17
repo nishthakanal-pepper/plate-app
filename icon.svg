@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="40" fill="#130e09"/>
+  <text
+    x="90" y="128"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="130"
+    font-weight="700"
+    font-style="italic"
+    text-anchor="middle"
+    fill="none"
+    stroke="#7A2A00"
+    stroke-width="10"
+    stroke-linejoin="round"
+  >P</text>
+  <text
+    x="90" y="128"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="130"
+    font-weight="700"
+    font-style="italic"
+    text-anchor="middle"
+    fill="#E8621A"
+  >P</text>
+</svg>

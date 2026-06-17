@@ -2,16 +2,17 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0f0f0f;
-  --surface: #1a1a1a;
-  --sidebar: #141414;
-  --accent: #7c6af7;
+  --bg: #130e09;
+  --surface: #1c1510;
+  --sidebar: #160f09;
+  --accent: #E8621A;
+  --accent-dark: #b84c12;
   --overdue: #f87171;
-  --due-soon: #fb923c;
+  --due-soon: #fbbf24;
   --done: #4ade80;
-  --text: #f2f2f2;
-  --text-secondary: #6b7280;
-  --border: #2a2a2a;
+  --text: #f5ede6;
+  --text-secondary: #7a6a5f;
+  --border: #2e2018;
   --radius: 8px;
   --radius-sm: 4px;
   --sidebar-width: 240px;
@@ -141,8 +142,9 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   max-width: 420px;
 }
 
-.setup-logo { font-size: 48px; text-align: center; margin-bottom: 12px; }
-.setup-title { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.setup-logo { display: none; }
+.setup-wordmark { height: 72px; width: auto; object-fit: contain; display: block; margin: 0 auto 20px; }
+.setup-title { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px; display: none; }
 .setup-subtitle { color: var(--text-secondary); text-align: center; margin-bottom: 28px; font-size: 13px; }
 
 .field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
@@ -189,8 +191,9 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   padding: 18px 16px 12px;
   border-bottom: 1px solid var(--border);
 }
-.app-logo { font-size: 20px; }
-.app-name { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.app-logo { display: none; }
+.app-name { display: none; }
+.sidebar-wordmark { height: 28px; width: auto; object-fit: contain; }
 
 .sidebar-nav { padding: 8px 8px 0; }
 

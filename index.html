@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#7c6af7" />
   <title>Plate</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <!-- Setup screen -->
   <div id="setup-screen" class="setup-screen hidden">
     <div class="setup-card">
-      <div class="setup-logo">🍽️</div>
+      <img src="logo.png" alt="Plate" class="setup-wordmark" />
       <h1 class="setup-title">Plate</h1>
       <p class="setup-subtitle">Your tasks are stored privately in your GitHub account. This is a one-time setup.</p>
       <form id="setup-form">
@@ -37,8 +37,7 @@
     <!-- Sidebar (laptop) -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
-        <span class="app-logo">🍽️</span>
-        <span class="app-name">Plate</span>
+        <img src="logo.png" alt="Plate" class="sidebar-wordmark" />
       </div>
 
       <nav class="sidebar-nav">
@@ -442,6 +441,6 @@
     <div id="load-spinner" class="load-spinner hidden">Loading…</div>
   </div>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
