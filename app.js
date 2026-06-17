@@ -572,7 +572,7 @@ function buildTaskCard(task) {
 
   const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
   const typeHtml = task.contentType ? `<span class="content-type-tag">${task.contentType}</span>` : '';
-  const subtaskHtml = donePct ? `<span class="subtask-count">☑ ${donePct}</span>` : '';
+  const subtaskHtml = donePct ? `<span class="subtask-count card-subtask-count">☑ ${donePct}</span>` : '';
 
   card.innerHTML = `
     <div class="task-card-top">
@@ -705,33 +705,7 @@ function renderAllTasks() {
 
   const list = document.getElementById('all-tasks-list');
   list.innerHTML = '';
-  const t = today();
-
-  tasks.forEach(task => {
-    const ws = getWorkspace(task.workspaceId);
-    const status = getDeadlineStatus(task.dueDate, task.status);
-    const item = document.createElement('div');
-    item.className = `task-list-item${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}${task.status === 'Done' ? ' done' : ''}`;
-    const dueDisplay = task.dueDate ? isoToDisplay(task.dueDate) : '';
-    const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
-    item.innerHTML = `
-      <button class="task-check${task.status === 'Done' ? ' checked' : ''}" title="${task.status === 'Done' ? 'Mark incomplete' : 'Mark done'}"></button>
-      <span class="task-list-item-title">${escHtml(task.title)}</span>
-      ${priorityHtml}
-      <span class="content-type-tag" style="display:${task.contentType ? 'inline' : 'none'}">${task.contentType || ''}</span>
-      <span class="task-list-item-ws">
-        <span class="ws-dot" style="background:${ws?.color || '#6b7280'}"></span>
-        ${escHtml(ws?.name || '')}
-      </span>
-      <span class="due-label${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}" style="flex-shrink:0">${dueDisplay}</span>
-    `;
-    item.querySelector('.task-check').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await toggleTaskDone(task.id);
-    });
-    item.addEventListener('click', () => openTaskPanel(task.id));
-    list.appendChild(item);
-  });
+  tasks.forEach(task => list.appendChild(buildListItem(task)));
 }
 
 ['search-input','filter-workspace','filter-status','filter-priority','filter-content-type','sort-by'].forEach(id => {
@@ -943,6 +917,84 @@ document.getElementById('delete-task-btn').addEventListener('click', async () =>
   closeTaskPanel();
   refreshCurrentView();
 });
+
+async function toggleSubtaskDone(taskId, subtaskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const sub = (task.subtasks || []).find(s => s.id === subtaskId);
+  if (!sub) return;
+  sub.done = !sub.done;
+  await saveData();
+  refreshCurrentView();
+}
+
+function buildListItem(task) {
+  const ws = getWorkspace(task.workspaceId);
+  const status = getDeadlineStatus(task.dueDate, task.status);
+  const isDone = task.status === 'Done';
+  const subtasks = task.subtasks || [];
+  const hasSubtasks = subtasks.length > 0;
+  const doneSubs = subtasks.filter(s => s.done).length;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'task-list-wrapper';
+
+  const dueDisplay = task.dueDate ? isoToDisplay(task.dueDate) : '';
+  const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
+  const subtaskBadge = hasSubtasks ? `<span class="list-subtask-badge">${doneSubs}/${subtasks.length}</span>` : '';
+
+  const item = document.createElement('div');
+  item.className = `task-list-item${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}${isDone ? ' done' : ''}`;
+  item.innerHTML = `
+    <button class="task-check${isDone ? ' checked' : ''}" title="${isDone ? 'Mark incomplete' : 'Mark done'}"></button>
+    ${hasSubtasks ? `<button class="subtask-expand-btn" title="Show subtasks">▶</button>` : ''}
+    <span class="task-list-item-title">${escHtml(task.title)}</span>
+    ${priorityHtml}
+    ${subtaskBadge}
+    <span class="content-type-tag" style="display:${task.contentType ? 'inline' : 'none'}">${task.contentType || ''}</span>
+    <span class="task-list-item-ws">
+      <span class="ws-dot" style="background:${ws?.color || '#6b7280'}"></span>
+      ${escHtml(ws?.name || '')}
+    </span>
+    <span class="due-label${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}" style="flex-shrink:0">${dueDisplay}</span>
+  `;
+  item.querySelector('.task-check').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await toggleTaskDone(task.id);
+  });
+
+  if (hasSubtasks) {
+    const expandBtn = item.querySelector('.subtask-expand-btn');
+    const subRows = document.createElement('div');
+    subRows.className = 'subtask-rows hidden';
+    subtasks.forEach(sub => {
+      const row = document.createElement('div');
+      row.className = `subtask-list-row${sub.done ? ' done' : ''}`;
+      row.innerHTML = `
+        <button class="task-check subtask-check${sub.done ? ' checked' : ''}"></button>
+        <span class="subtask-list-title">${escHtml(sub.title)}</span>
+      `;
+      row.querySelector('.subtask-check').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await toggleSubtaskDone(task.id, sub.id);
+      });
+      subRows.appendChild(row);
+    });
+    expandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !subRows.classList.contains('hidden');
+      subRows.classList.toggle('hidden', open);
+      expandBtn.classList.toggle('open', !open);
+    });
+    wrapper.appendChild(item);
+    wrapper.appendChild(subRows);
+  } else {
+    wrapper.appendChild(item);
+  }
+
+  item.addEventListener('click', () => openTaskPanel(task.id));
+  return wrapper;
+}
 
 async function toggleTaskDone(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
@@ -1183,25 +1235,7 @@ function renderWorkspaceList(wsId) {
   }
 
   tasks.forEach(task => {
-    const status = getDeadlineStatus(task.dueDate, task.status);
-    const item = document.createElement('div');
-    item.className = `task-list-item${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}${task.status === 'Done' ? ' done' : ''}`;
-    const dueDisplay = task.dueDate ? isoToDisplay(task.dueDate) : '';
-    const priorityHtml = task.priority ? `<span class="priority-badge ${task.priority.toLowerCase()}">${task.priority}</span>` : '';
-    item.innerHTML = `
-      <button class="task-check${task.status === 'Done' ? ' checked' : ''}" title="${task.status === 'Done' ? 'Mark incomplete' : 'Mark done'}"></button>
-      <span class="task-list-item-title">${escHtml(task.title)}</span>
-      ${priorityHtml}
-      <span class="content-type-tag" style="display:${task.contentType ? 'inline' : 'none'}">${task.contentType || ''}</span>
-      <span class="task-list-ws-status" style="color:var(--text-secondary);font-size:12px;flex-shrink:0">${task.status}</span>
-      <span class="due-label${status === 'overdue' ? ' overdue' : status === 'due-today' ? ' due-today' : ''}" style="flex-shrink:0">${dueDisplay}</span>
-    `;
-    item.querySelector('.task-check').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await toggleTaskDone(task.id);
-    });
-    item.addEventListener('click', () => openTaskPanel(task.id));
-    listEl.appendChild(item);
+    listEl.appendChild(buildListItem(task));
   });
 }
 
