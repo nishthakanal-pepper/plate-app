@@ -924,6 +924,14 @@ async function toggleSubtaskDone(taskId, subtaskId) {
   const sub = (task.subtasks || []).find(s => s.id === subtaskId);
   if (!sub) return;
   sub.done = !sub.done;
+  const allDone = task.subtasks.length > 0 && task.subtasks.every(s => s.done);
+  if (allDone && task.status !== 'Done') {
+    task.status = 'Done';
+    task.completedAt = new Date().toISOString();
+    if (task.repeat && task.repeatNext) spawnNextOccurrence(task);
+    playCompletionSound();
+    showGoodJobToast();
+  }
   await saveData();
   refreshCurrentView();
 }
