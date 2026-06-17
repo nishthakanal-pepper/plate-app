@@ -14,6 +14,7 @@ let ghToken = null;
 let ghUsername = null;
 let fileSha = null;
 let showArchived = false;
+let hideCompleted = false;
 let dragTaskId = null;
 
 // ===== Constants =====
@@ -626,7 +627,7 @@ function renderKanban(wsId) {
   const statuses = ['Not Started', 'In Progress', 'With Client', 'Done'];
   statuses.forEach(status => {
     const col = document.querySelector(`.kanban-cards[data-status="${status}"]`);
-    const tasks = state.tasks.filter(t => t.workspaceId === wsId && t.status === status);
+    const tasks = state.tasks.filter(t => t.workspaceId === wsId && t.status === status && !(hideCompleted && status === 'Done'));
     col.innerHTML = '';
     tasks.forEach(task => {
       const card = buildTaskCard(task);
@@ -682,6 +683,7 @@ function renderAllTasks() {
   const sortBy = document.getElementById('sort-by').value;
 
   let tasks = state.tasks.filter(t => {
+    if (hideCompleted && t.status === 'Done') return false;
     if (filterWs && t.workspaceId !== filterWs) return false;
     if (filterStatus && t.status !== filterStatus) return false;
     if (filterPriority && t.priority !== filterPriority) return false;
@@ -740,7 +742,7 @@ function renderWeekly() {
     header.className = 'weekly-day-header' + (isToday ? ' today' : '');
     header.textContent = `${dayNames[i]} ${d.getDate()}`;
     col.appendChild(header);
-    const dayTasks = state.tasks.filter(task => task.dueDate === ds && task.status !== 'Done');
+    const dayTasks = state.tasks.filter(task => task.dueDate === ds && !(hideCompleted && task.status === 'Done'));
     dayTasks.forEach(task => col.appendChild(buildTaskCard(task)));
     grid.appendChild(col);
   });
@@ -1105,7 +1107,7 @@ function renderCalendar() {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayTasks = state.tasks.filter(t => t.dueDate === dateStr);
+    const dayTasks = state.tasks.filter(t => t.dueDate === dateStr && !(hideCompleted && t.status === 'Done'));
     const cell = document.createElement('div');
     const isToday = dateStr === todayStr;
     const isSelected = dateStr === calSelectedDay;
@@ -1150,7 +1152,7 @@ function showCalendarDayPanel(dateStr) {
   const tasksEl = document.getElementById('cal-day-tasks');
   const [y, m, d] = dateStr.split('-');
   titleEl.textContent = `${parseInt(d)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]} ${y}`;
-  const dayTasks = state.tasks.filter(t => t.dueDate === dateStr);
+  const dayTasks = state.tasks.filter(t => t.dueDate === dateStr && !(hideCompleted && t.status === 'Done'));
   tasksEl.innerHTML = '';
   if (!dayTasks.length) {
     tasksEl.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;padding:4px 0">No tasks due</p>';
@@ -1230,7 +1232,7 @@ function renderWorkspaceList(wsId) {
 
   const statuses = ['Not Started', 'In Progress', 'With Client', 'Done'];
   const tasks = state.tasks
-    .filter(t => t.workspaceId === wsId)
+    .filter(t => t.workspaceId === wsId && !(hideCompleted && t.status === 'Done'))
     .sort((a, b) => {
       const si = statuses.indexOf(a.status) - statuses.indexOf(b.status);
       if (si !== 0) return si;
@@ -1299,6 +1301,15 @@ document.getElementById('quick-add-form').addEventListener('submit', async (e) =
   });
   await saveData();
   closeQuickAdd();
+  refreshCurrentView();
+});
+
+// ===== Hide completed toggle =====
+document.getElementById('hide-completed-btn').addEventListener('click', () => {
+  hideCompleted = !hideCompleted;
+  const btn = document.getElementById('hide-completed-btn');
+  btn.classList.toggle('hide-completed-active', hideCompleted);
+  btn.title = hideCompleted ? 'Show completed tasks' : 'Hide completed tasks';
   refreshCurrentView();
 });
 

@@ -112,6 +112,9 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   transition: color 0.15s;
 }
 .icon-btn:hover { color: var(--text); }
+#hide-completed-btn { font-size: 16px; opacity: 0.45; transition: opacity 0.15s; }
+#hide-completed-btn:hover { opacity: 0.75; }
+#hide-completed-btn.hide-completed-active { opacity: 1; color: var(--accent); }
 
 /* ===== Badge ===== */
 .badge {
