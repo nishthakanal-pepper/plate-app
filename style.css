@@ -578,8 +578,17 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
 }
 .subtask-list-row:first-child { border-top: none; }
 .subtask-list-row.done .subtask-list-title { text-decoration: line-through; color: var(--text-secondary); }
-.subtask-list-title { font-size: 13px; color: var(--text); }
+.subtask-list-title { font-size: 13px; color: var(--text); flex: 1; }
 .subtask-check { width: 15px; height: 15px; min-width: 15px; }
+.subtask-due-label { font-size: 11px; color: var(--text-secondary); flex-shrink: 0; }
+.subtask-status-chip {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--border);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
 
 /* ===== Calendar view ===== */
 .calendar-header {
@@ -777,16 +786,61 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
   margin-top: 4px;
 }
 
-.subtasks-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.subtasks-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
 .subtask-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
 }
-.subtask-row input[type="checkbox"] { width: auto; flex-shrink: 0; cursor: pointer; }
-.subtask-row input[type="text"] { flex: 1; }
+.subtask-row-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.subtask-title-input { flex: 1; }
+.subtask-expand-toggle {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.subtask-expand-toggle:hover { background: var(--border); color: var(--text); }
 .subtask-remove { color: var(--text-secondary); font-size: 16px; line-height: 1; flex-shrink: 0; }
 .subtask-remove:hover { color: var(--overdue); }
+
+.subtask-detail-fields {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface);
+}
+.subtask-detail-fields.hidden { display: none; }
+.subtask-field-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.subtask-field-row select,
+.subtask-field-row input[type="date"] {
+  flex: 1;
+  min-width: 100px;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.subtask-notes-input {
+  width: 100%;
+  font-size: 12px;
+  resize: vertical;
+  min-height: 44px;
+}
 
 /* ===== Quick add ===== */
 .quick-add {

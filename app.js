@@ -70,7 +70,7 @@ function spawnNextOccurrence(task) {
     dueDate: nextDue,
     contentType: task.contentType,
     notes: '',
-    subtasks: (task.subtasks || []).map(s => ({ id: uuid(), title: s.title, done: false })),
+    subtasks: (task.subtasks || []).map(s => ({ id: uuid(), title: s.title, done: false, status: 'Not Started', priority: null, dueDate: null, contentType: null, notes: '' })),
     createdAt: new Date().toISOString(),
     completedAt: null,
     repeat: task.repeat,
@@ -561,7 +561,7 @@ function buildTaskCard(task) {
   card.dataset.id = task.id;
 
   const donePct = task.subtasks?.length
-    ? `${task.subtasks.filter(s => s.done).length}/${task.subtasks.length}`
+    ? `${task.subtasks.filter(s => s.done || s.status === 'Done').length}/${task.subtasks.length}`
     : '';
 
   let dueHtml = '';
@@ -820,28 +820,61 @@ function openTaskPanel(taskId = null, defaultWorkspaceId = null, defaultStatus =
 function renderSubtasksList(subtasks) {
   const list = document.getElementById('subtasks-list');
   list.innerHTML = '';
-  subtasks.forEach((st, i) => {
-    list.appendChild(buildSubtaskRow(st.id, st.title, st.done));
+  subtasks.forEach(st => {
+    list.appendChild(buildSubtaskRow(st));
   });
 }
 
-function buildSubtaskRow(id, title, done) {
+const CONTENT_TYPES = ['Article', 'Blog', 'Social', 'Email', 'Video', 'Infographic', 'Whitepaper', 'Case Study', 'Newsletter', 'Ad Copy', 'Landing Page', 'Script'];
+
+function buildSubtaskRow(st = {}) {
+  const { id = uuid(), title = '', done = false, status = 'Not Started', priority = '', dueDate = '', contentType = '', notes = '' } = st;
   const row = document.createElement('div');
   row.className = 'subtask-row';
   row.dataset.id = id;
   row.innerHTML = `
-    <input type="checkbox" ${done ? 'checked' : ''} />
-    <input type="text" value="${escHtml(title)}" placeholder="Subtask…" />
-    <button type="button" class="subtask-remove">✕</button>
+    <div class="subtask-row-header">
+      <input type="text" class="subtask-title-input" value="${escHtml(title)}" placeholder="Subtask…" />
+      <button type="button" class="subtask-expand-toggle" title="More options">⋯</button>
+      <button type="button" class="subtask-remove">✕</button>
+    </div>
+    <div class="subtask-detail-fields hidden">
+      <div class="subtask-field-row">
+        <select class="subtask-status-sel">
+          <option value="Not Started"${status === 'Not Started' ? ' selected' : ''}>Not Started</option>
+          <option value="In Progress"${status === 'In Progress' ? ' selected' : ''}>In Progress</option>
+          <option value="With Client"${status === 'With Client' ? ' selected' : ''}>With Client</option>
+          <option value="Done"${status === 'Done' ? ' selected' : ''}>Done</option>
+        </select>
+        <select class="subtask-priority-sel">
+          <option value="">Priority</option>
+          <option value="Low"${priority === 'Low' ? ' selected' : ''}>Low</option>
+          <option value="Medium"${priority === 'Medium' ? ' selected' : ''}>Medium</option>
+          <option value="High"${priority === 'High' ? ' selected' : ''}>High</option>
+        </select>
+        <input type="date" class="subtask-due-input" value="${dueDate || ''}" title="Due date" />
+      </div>
+      <div class="subtask-field-row">
+        <select class="subtask-type-sel">
+          <option value="">Content type</option>
+          ${CONTENT_TYPES.map(t => `<option value="${t}"${contentType === t ? ' selected' : ''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <textarea class="subtask-notes-input" placeholder="Notes…" rows="2">${escHtml(notes)}</textarea>
+    </div>
   `;
   row.querySelector('.subtask-remove').addEventListener('click', () => row.remove());
+  row.querySelector('.subtask-expand-toggle').addEventListener('click', () => {
+    const fields = row.querySelector('.subtask-detail-fields');
+    fields.classList.toggle('hidden');
+  });
   return row;
 }
 
 document.getElementById('add-subtask-btn').addEventListener('click', () => {
   const list = document.getElementById('subtasks-list');
-  list.appendChild(buildSubtaskRow(uuid(), '', false));
-  list.lastChild.querySelector('input[type="text"]').focus();
+  list.appendChild(buildSubtaskRow());
+  list.lastChild.querySelector('.subtask-title-input').focus();
 });
 
 function closeTaskPanel() {
@@ -858,11 +891,19 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
   const workspaceId = document.getElementById('task-workspace').value;
   if (!title || !workspaceId) return;
 
-  const subtasks = Array.from(document.getElementById('subtasks-list').querySelectorAll('.subtask-row')).map(row => ({
-    id: row.dataset.id || uuid(),
-    title: row.querySelector('input[type="text"]').value.trim(),
-    done: row.querySelector('input[type="checkbox"]').checked,
-  })).filter(s => s.title);
+  const subtasks = Array.from(document.getElementById('subtasks-list').querySelectorAll('.subtask-row')).map(row => {
+    const status = row.querySelector('.subtask-status-sel')?.value || 'Not Started';
+    return {
+      id: row.dataset.id || uuid(),
+      title: row.querySelector('.subtask-title-input').value.trim(),
+      done: status === 'Done',
+      status,
+      priority: row.querySelector('.subtask-priority-sel')?.value || null,
+      dueDate: row.querySelector('.subtask-due-input')?.value || null,
+      contentType: row.querySelector('.subtask-type-sel')?.value || null,
+      notes: row.querySelector('.subtask-notes-input')?.value || '',
+    };
+  }).filter(s => s.title);
 
   const status = document.getElementById('task-status').value;
   const repeat = document.getElementById('task-repeat').value || null;
@@ -926,6 +967,7 @@ async function toggleSubtaskDone(taskId, subtaskId) {
   const sub = (task.subtasks || []).find(s => s.id === subtaskId);
   if (!sub) return;
   sub.done = !sub.done;
+  sub.status = sub.done ? 'Done' : 'Not Started';
   const allDone = task.subtasks.length > 0 && task.subtasks.every(s => s.done);
   if (allDone && task.status !== 'Done') {
     task.status = 'Done';
@@ -944,7 +986,7 @@ function buildListItem(task) {
   const isDone = task.status === 'Done';
   const subtasks = task.subtasks || [];
   const hasSubtasks = subtasks.length > 0;
-  const doneSubs = subtasks.filter(s => s.done).length;
+  const doneSubs = subtasks.filter(s => s.done || s.status === 'Done').length;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'task-list-wrapper';
@@ -978,11 +1020,16 @@ function buildListItem(task) {
     const subRows = document.createElement('div');
     subRows.className = 'subtask-rows hidden';
     subtasks.forEach(sub => {
+      const subDone = sub.done || sub.status === 'Done';
       const row = document.createElement('div');
-      row.className = `subtask-list-row${sub.done ? ' done' : ''}`;
+      row.className = `subtask-list-row${subDone ? ' done' : ''}`;
+      const subPriority = sub.priority ? `<span class="priority-badge ${sub.priority.toLowerCase()}">${sub.priority}</span>` : '';
+      const subDue = sub.dueDate ? `<span class="subtask-due-label">${isoToDisplay(sub.dueDate)}</span>` : '';
+      const subStatus = sub.status && sub.status !== 'Not Started' ? `<span class="subtask-status-chip">${sub.status}</span>` : '';
       row.innerHTML = `
-        <button class="task-check subtask-check${sub.done ? ' checked' : ''}"></button>
+        <button class="task-check subtask-check${subDone ? ' checked' : ''}"></button>
         <span class="subtask-list-title">${escHtml(sub.title)}</span>
+        ${subPriority}${subStatus}${subDue}
       `;
       row.querySelector('.subtask-check').addEventListener('click', async (e) => {
         e.stopPropagation();
