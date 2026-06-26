@@ -15,6 +15,7 @@ let ghUsername = null;
 let fileSha = null;
 let showArchived = false;
 let hideCompleted = false;
+const openSubtaskRows = new Set(); // tracks which task IDs have their subtask accordion expanded
 let dragTaskId = null;
 
 // ===== Constants =====
@@ -1018,7 +1019,9 @@ function buildListItem(task) {
   if (hasSubtasks) {
     const expandBtn = item.querySelector('.subtask-expand-btn');
     const subRows = document.createElement('div');
-    subRows.className = 'subtask-rows hidden';
+    const isOpen = openSubtaskRows.has(task.id);
+    subRows.className = 'subtask-rows' + (isOpen ? '' : ' hidden');
+    if (isOpen) expandBtn.classList.add('open');
     subtasks.forEach(sub => {
       const subDone = sub.done || sub.status === 'Done';
       const row = document.createElement('div');
@@ -1042,6 +1045,8 @@ function buildListItem(task) {
       const open = !subRows.classList.contains('hidden');
       subRows.classList.toggle('hidden', open);
       expandBtn.classList.toggle('open', !open);
+      if (open) openSubtaskRows.delete(task.id);
+      else openSubtaskRows.add(task.id);
     });
     wrapper.appendChild(item);
     wrapper.appendChild(subRows);
