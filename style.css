@@ -196,7 +196,7 @@ code { font-family: monospace; background: var(--border); padding: 1px 4px; bord
 }
 .app-logo { display: none; }
 .app-name { display: none; }
-.sidebar-wordmark { height: 28px; width: auto; object-fit: contain; }
+.sidebar-wordmark { width: 100%; height: auto; object-fit: contain; display: block; }
 
 .sidebar-nav { padding: 8px 8px 0; }
 
